@@ -1,0 +1,21 @@
+{
+  "name": "productors/soc-logger-client",
+  "description": "Client for logging",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Oleksandr Yeropudov",
+      "email": "oleksandr.yeropudov@gmail.com"
+    }
+  ],
+  "require": {
+    "monolog/monolog": "^1.23",
+    "php-amqplib/php-amqplib": "^2.7"
+  },
+  "autoload": {
+    "psr-4": {
+      "Productors\\LoggerClient\\": "LoggerClient/"
+    }
+  }
+}
