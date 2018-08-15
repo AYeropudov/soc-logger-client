@@ -29,7 +29,7 @@ class Logger implements ProductorsLoggerInterface
         if(!empty($config)) {
             $this->client = new ClientRabbit($config);
         } else {
-            $this->client = false;
+            $this->client = new ClientDefault();
         }
     }
 
