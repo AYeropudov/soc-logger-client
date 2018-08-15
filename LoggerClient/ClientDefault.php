@@ -20,7 +20,7 @@ class ClientDefault implements ClientInterface
             \Monolog\Logger::DEBUG,
             false
         );
-        $handler->setFormatter(new \Monolog\Formatter\NormalizerFormatter());
+        $handler->setFormatter(new \Monolog\Formatter\LineFormatter());
         $logger = new \Monolog\Logger('default.logger');
         $logger->pushHandler($handler);
         $logger->debug($message['message'], $message);

@@ -19,7 +19,7 @@ class Logger implements ProductorsLoggerInterface
 
     /** @var ClientInterface */
     private $client;
-    /**
+
     /**
      * Logger constructor.
      * @param array $config
@@ -27,7 +27,9 @@ class Logger implements ProductorsLoggerInterface
     public function __construct(array $config)
     {
         if(!empty($config)) {
-            $this->client = new ClientRabbit($config);
+            $clientConfig = $config['client'];
+            $this->client = new $clientConfig['handler']($config);
+
         } else {
             $this->client = new ClientDefault();
         }
@@ -48,6 +50,7 @@ class Logger implements ProductorsLoggerInterface
      * @param \Throwable $throwable
      */
     public function prepareThrowable(\Throwable $throwable, ServerRequestInterface $request){
+        
         $message = [
             'file' => $throwable->getFile(),
             'line' => $throwable->getLine(),
