@@ -1,10 +1,4 @@
 <?php
-namespace Productors\LoggerClient;
-
-use PhpAmqpLib\Channel\AMQPChannel;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Message\AMQPMessage;
-
 /**
  * Created by PhpStorm.
  * User: alex
@@ -12,38 +6,84 @@ use PhpAmqpLib\Message\AMQPMessage;
  * Time: 14:57
  */
 
-class Logger
-{
-    /** @var AMQPStreamConnection */
-    private $connection;
-    /** @var string */
-    private $queue;
-    /** @var AMQPChannel */
-    private $channel;
+namespace Productors\LoggerClient;
+use Psr\Http\Message\ServerRequestInterface;
 
-    const EXCHANGE = 'router';
+
+/**
+ * Class Logger
+ * @package Productors\LoggerClient
+ */
+class Logger implements ProductorsLoggerInterface
+{
+
+    /** @var ClientInterface */
+    private $client;
+    /**
     /**
      * Logger constructor.
-     * @param AMQPStreamConnection $connection
-     * @param string $queue
+     * @param array $config
      */
-    public function __construct(AMQPStreamConnection $connection, $queue)
+    public function __construct(array $config)
     {
-        $this->connection = $connection;
-        $this->queue = $queue;
-        $this->channel = $this->connection->channel();
-        $this->channel->queue_declare($this->queue, false, true, false, false);
-        $this->channel->exchange_declare(self::EXCHANGE, 'direct', false, true, false);
-        $this->channel->queue_bind($this->queue, self::EXCHANGE);
+        if(!empty($config)) {
+            $this->client = new ClientRabbit($config);
+        } else {
+            $this->client = false;
+        }
     }
 
-    public function __invoke($body)
+    /**
+     * @param \Throwable $throwable
+     */
+    public function __invoke(\Throwable $throwable, ServerRequestInterface $request)
     {
-        $message = new \PhpAmqpLib\Message\AMQPMessage(json_encode($body), array('content_type' => 'application/json', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT));
-        $this->channel->basic_publish($message, self::EXCHANGE);
-        $this->channel->close();
-        $this->connection->close();
+        $message = $this->prepareThrowable($throwable, $request);
+        if($this->getClient()) {
+            $this->getClient()->send($message);
+        }
     }
 
+    /**
+     * @param \Throwable $throwable
+     */
+    public function prepareThrowable(\Throwable $throwable, ServerRequestInterface $request){
+        $message = [
+            'file' => $throwable->getFile(),
+            'line' => $throwable->getLine(),
+            'message' => $throwable->getMessage()
+        ];
 
+        $message['body'] = $request->getBody()->getContents();
+        $message['params'] = $request->getAttributes();
+        $message['parsedBody'] = $request->getParsedBody();
+        $message['cookies'] = $request->getCookieParams();
+        $message['query'] = $request->getQueryParams();
+        $message['headers'] = $request->getHeaders();
+        if (property_exists($throwable, 'level')) {
+            $message['level'] = $throwable->getLevel();
+        } else {
+            $message['level'] = 500;
+        }
+        if (property_exists($throwable, 'response')) {
+            $message['response'] = $throwable->getResponse()->getBody()->getContents();
+        }
+        return $message;
+    }
+
+    /**
+     * @return ClientInterface | bool
+     */
+    public function getClient()
+    {
+        return $this->client;
+    }
+
+    /**
+     * @param ClientInterface $client
+     */
+    public function setClient(ClientInterface $client): void
+    {
+        $this->client = $client;
+    }
 }
