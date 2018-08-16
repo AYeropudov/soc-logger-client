@@ -63,7 +63,7 @@ class Logger implements ProductorsLoggerInterface
         $message['cookies'] = $request->getCookieParams();
         $message['query'] = $request->getQueryParams();
         $message['headers'] = $request->getHeaders();
-        $message['user'] = $request->getAttribute('identity')->getId();
+        $message['user'] = $throwable->getTrace()[1]['args'][0]->getAttribute('identity')->getId();
         if (property_exists($throwable, 'level')) {
             $message['level'] = $throwable->getLevel();
         } else {
