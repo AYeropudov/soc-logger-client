@@ -7,6 +7,8 @@
  */
 
 namespace Productors\LoggerClient;
+use App\Middlewares\RequestThrowable;
+use Productors\UserClient\StorageInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 
@@ -63,13 +65,21 @@ class Logger implements ProductorsLoggerInterface
         $message['cookies'] = $request->getCookieParams();
         $message['query'] = $request->getQueryParams();
         $message['headers'] = $request->getHeaders();
-        try {
-            $message['user'] = $throwable->getTrace()[1]['args'][0]->getAttribute('identity')->getId();
-        } catch (\Exception $exception){}
-        if (property_exists($throwable, 'level')) {
-            $message['level'] = $throwable->getLevel();
-        } else {
-            $message['level'] = 500;
+        if($throwable instanceof RequestThrowable) {
+            try {
+                $identity = $throwable->getTrace()[1]['args'][0]->getAttribute('identity');
+                if(method_exists($identity, 'getId')){
+                    $message['user'] = $identity->getId();
+                } elseif ($identity instanceof StorageInterface){
+                    $message['user'] = $identity->getUuid();
+                }
+            } catch (\Exception $exception) {
+            }
+            if (property_exists($throwable, 'level')) {
+                $message['level'] = $throwable->getLevel();
+            } else {
+                $message['level'] = 500;
+            }
         }
         if (property_exists($throwable, 'response')) {
             $message['response'] = $throwable->getResponse()->getBody()->getContents();
